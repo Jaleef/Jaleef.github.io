@@ -1,75 +1,40 @@
-# React + TypeScript + Vite
+# Jaleef Blog
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个基于 React、TypeScript、Vite 和 GitHub Pages 的轻量博客，支持在 `/write` 使用接近 Typora 的所见即所得编辑器写作，并直接发布到 GitHub 仓库。
 
-Currently, two official plugins are available:
+## 本地开发
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## 在线发布文章
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. 在 GitHub 创建 Fine-grained Personal Access Token。
+2. 将 Repository access 限制为 `Jaleef/Jaleef.github.io`。
+3. 为该仓库开启 `Contents: Read and write` 权限。
+4. 打开网站的“写文章”页面，填写标题、正文和 Token。
+5. 点击“发布文章”，文章会写入 `content/posts/`，随后由 GitHub Actions 自动部署。
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Token 只在当前页面内存中使用，不会写入代码或仓库；刷新页面后需要重新输入。不要在公共电脑上使用 Token。
 
+## 文章格式
+
+文章保存在 `content/posts/*.md`，包含 Front Matter：
+
+```md
+---
+title: 文章标题
+description: 文章摘要
+date: 2026-09-16
+tags: [React, TypeScript]
+---
+```
+
+## 构建检查
+
+```bash
+npm run lint
+npm run build
 ```
