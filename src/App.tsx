@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HashRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import { Editor, defaultValueCtx, rootCtx } from '@milkdown/core'
-import { commonmark } from '@milkdown/preset-commonmark'
 import { nord } from '@milkdown/theme-nord'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
+import { katexOptionsCtx, math } from '@milkdown/plugin-math'
 import { upload } from '@milkdown/plugin-upload'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { extractMath, katexOptions, restoreMath } from './lib/math'
+import { mathBlockPlugins } from './lib/math-block-node'
+import { commonmarkWithoutEmptyLinePlaceholder, specialBlockPlugins } from './lib/special-block-plugins'
 import './App.css'
 
 type Post = {
@@ -190,8 +193,15 @@ function DangerZone({ post }: { post: Post }) {
 function PostPage() {
   const { slug } = useParams()
   const post = posts.find((item) => item.slug === slug)
+  // 先把公式抽成占位符再交给 marked，最后用 KaTeX 结果还原；
+  // 用 useMemo 避免切换主题等重渲染时反复解析与渲染公式。
+  const html = useMemo(() => {
+    if (!post) return ''
+    const { markdown, expressions } = extractMath(post.body)
+    const sanitized = DOMPurify.sanitize(marked.parse(markdown) as string)
+    return restoreMath(sanitized, expressions)
+  }, [post])
   if (!post) return <div className="not-found"><h1>找不到这篇文章</h1><Link to="/">返回文章列表</Link></div>
-  const html = DOMPurify.sanitize(marked.parse(post.body) as string)
 
   return (
     <article className="post-page">
@@ -212,11 +222,18 @@ function EditorContent({ initialValue, onChange }: { initialValue: string; onCha
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, initialValue)
+      ctx.set(katexOptionsCtx.key, katexOptions)
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => onChange(markdown))
     })
     .config(nord)
-    .use(commonmark)
+    .use(commonmarkWithoutEmptyLinePlaceholder)
     .use(listener)
+    // 官方 math 插件提供 remark 解析、KaTeX 配置、行内公式与 `$$ ` 输入规则
+    .use(math)
+    // 再为 math_block 节点挂上可编辑视图，解决「光标进不去、公式无法修改」的问题
+    .use(mathBlockPlugins)
+    // 保证代码块、公式块等特殊块后面总能继续写（末尾自动补段落 + 方向键兜底）
+    .use(specialBlockPlugins)
     .use(upload))
   return <Milkdown />
 }
@@ -228,7 +245,7 @@ function WritePage() {
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState('')
-  const [body, setBody] = useState('# 开始写作\n\n在这里写下你的文章内容……')
+  const [body, setBody] = useState('# 开始写作\n\n在这里写下你的文章内容……\n\n数学公式用 LaTeX 语法：行内写作 $E = mc^2$，独立成行用两个美元符号包裹。\n')
   const [token, setToken] = useState('')
   const [status, setStatus] = useState('')
   const [followCursor, setFollowCursor] = useState(false)

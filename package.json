@@ -14,16 +14,27 @@
   "dependencies": {
     "@milkdown/core": "7.22.2",
     "@milkdown/plugin-listener": "7.22.2",
+    "@milkdown/plugin-math": "7.5.9",
+    "@milkdown/plugin-trailing": "7.22.2",
     "@milkdown/plugin-upload": "7.22.2",
     "@milkdown/preset-commonmark": "7.22.2",
     "@milkdown/react": "7.22.2",
     "@milkdown/theme-nord": "7.22.2",
     "@milkdown/utils": "7.22.2",
     "dompurify": "^3.4.15",
+    "katex": "0.18.10",
     "marked": "^18.0.13",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
+  },
+  "overrides": {
+    "@milkdown/plugin-math": {
+      "@milkdown/utils": "7.22.2"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
