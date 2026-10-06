@@ -14,7 +14,7 @@
     "@milkdown/plugin-listener": "^7.22.1",
     "@milkdown/plugin-upload": "^7.22.1",
     "@milkdown/preset-commonmark": "^7.22.1",
-    "@milkdown/react": "^7.22.1",
+    "@milkdown/react": "^7.6.1",
     "@milkdown/theme-nord": "^7.22.1",
     "@milkdown/utils": "^7.22.1",
     "dompurify": "^3.4.15",

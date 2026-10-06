@@ -103,6 +103,90 @@ function PostCard({ post }: { post: Post }) {
   )
 }
 
+const repoOwner = 'Jaleef'
+const repoName = 'Jaleef.github.io'
+const postsDirectory = 'content/posts'
+
+function DangerZone({ post }: { post: Post }) {
+  const [open, setOpen] = useState(false)
+  const [token, setToken] = useState('')
+  const [status, setStatus] = useState('')
+  const [working, setWorking] = useState(false)
+
+  const gitHubRequest = (path: string, init: RequestInit, authToken: string) => fetch(
+    `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`,
+    {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        ...init.headers,
+      },
+    },
+  )
+
+  const removePost = async () => {
+    if (!token.trim()) {
+      setStatus('请输入 GitHub Token，删除操作必须经过确认。')
+      return
+    }
+    setWorking(true)
+    setStatus('正在校验 Token 并删除……')
+    const path = `${postsDirectory}/${post.slug}.md`
+    try {
+      // 删除文件需要该文件的 sha，先读取再提交删除。
+      const readResponse = await gitHubRequest(path, { method: 'GET' }, token.trim())
+      if (readResponse.status === 401) throw new Error('Token 无效或已过期，请重新生成。')
+      if (readResponse.status === 403) throw new Error('Token 权限不足，需要目标仓库的 Contents: Read and write。')
+      if (readResponse.status === 404) throw new Error('未找到该文章文件，或 Token 没有访问该仓库的权限。')
+      if (!readResponse.ok) throw new Error('读取文章失败，请稍后重试。')
+      const sha = (await readResponse.json() as { sha?: string }).sha
+      if (!sha) throw new Error('无法获取文件版本信息，已取消删除。')
+
+      const deleteResponse = await gitHubRequest(path, {
+        method: 'DELETE',
+        body: JSON.stringify({ message: `delete: ${post.title}`, sha }),
+      }, token.trim())
+      if (!deleteResponse.ok) throw new Error('删除失败，请检查 Token 权限和仓库地址。')
+
+      setToken('')
+      setStatus('')
+      window.location.hash = '#/'
+      window.location.reload()
+    } catch (error) {
+      setWorking(false)
+      setStatus(error instanceof Error ? error.message : '删除失败，请稍后重试。')
+    }
+  }
+
+  return (
+    <section className={`danger-zone ${open ? 'is-open' : ''}`}>
+      {!open
+        ? <button className="danger-button" onClick={() => setOpen(true)}>删除这篇文章</button>
+        : (
+          <>
+            <p className="danger-hint">删除会从仓库移除 <code>{`${postsDirectory}/${post.slug}.md`}</code>，GitHub Pages 随后会重新部署，此操作不可撤销。</p>
+            <div className="danger-controls">
+              <input
+                type="password"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                placeholder="GitHub Fine-grained Token（需 Contents: Read and write）"
+              />
+              <button className="danger-confirm" onClick={removePost} disabled={working}>
+                {working ? '删除中……' : '确认删除'}
+              </button>
+              <button className="secondary-button" onClick={() => setOpen(false)} disabled={working}>取消</button>
+            </div>
+            <p className="danger-hint">Token 仅用于本次删除，不会保存到任何地方，刷新页面即消失。</p>
+          </>
+        )}
+      {status && <p className="status">{status}</p>}
+    </section>
+  )
+}
+
 function PostPage() {
   const { slug } = useParams()
   const post = posts.find((item) => item.slug === slug)
@@ -117,6 +201,8 @@ function PostPage() {
       <p className="post-description">{post.description}</p>
       <div className="tags">{post.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
       <div className="markdown-body" dangerouslySetInnerHTML={{ __html: html }} />
+      {/* key 让切到另一篇文章时自动清空 token 与状态 */}
+      <DangerZone key={post.slug} post={post} />
     </article>
   )
 }
@@ -185,12 +271,10 @@ function WritePage() {
       return
     }
     setStatus('正在发布……')
-    const owner = 'Jaleef'
-    const repo = 'Jaleef.github.io'
-    const path = `content/posts/${generatedSlug || `post-${Date.now()}`}.md`
+    const path = `${postsDirectory}/${generatedSlug || `post-${Date.now()}`}.md`
     const content = `---\ntitle: ${title.trim()}\ndescription: ${description.trim()}\ndate: ${new Date().toISOString().slice(0, 10)}\ntags: [${tags.split(',').map((tag) => tag.trim()).filter(Boolean).join(', ')}]\n---\n\n${body.trim()}\n`
     try {
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token.trim()}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: `post: ${title.trim()}`, content: btoa(unescape(encodeURIComponent(content))) }),
