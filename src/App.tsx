@@ -307,7 +307,25 @@ function WritePage() {
 
   return (
     <section className="write-page">
-      <div className="write-toolbar"><Link className="back-link" to="/">← 返回</Link><div><button className={`secondary-button ${followCursor ? 'is-active' : ''}`} onClick={() => setFollowCursor((enabled) => !enabled)} aria-pressed={followCursor}>↕ 跟随光标</button><button className="secondary-button" onClick={() => setToken('')}>清除 Token</button><button className="primary-button" onClick={publish}>发布文章</button></div></div>
+      <div className="write-toolbar">
+        <Link className="back-link" to="/">← 返回</Link>
+        <div className="write-actions">
+          {/* Token 与发布按钮同处一行：点完发布立刻能看到结果，不必滚到底部检查 */}
+          <input
+            className="token-input"
+            type="password"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="GitHub Token（Contents: Read and write）"
+            aria-label="GitHub Fine-grained Token"
+          />
+          <button className={`secondary-button ${followCursor ? 'is-active' : ''}`} onClick={() => setFollowCursor((enabled) => !enabled)} aria-pressed={followCursor}>↕ 跟随光标</button>
+          <button className="secondary-button" onClick={() => setToken('')}>清除 Token</button>
+          <button className="primary-button" onClick={publish}>发布文章</button>
+        </div>
+      </div>
+      {/* 发布状态紧贴工具栏，出错时就在按钮正下方，一眼可见 */}
+      {status && <p className="status toolbar-status">{status}</p>}
       <input className="title-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="文章标题" />
       <div className="post-options">
         <input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="URL slug（可选）" />
@@ -315,8 +333,7 @@ function WritePage() {
         <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="标签，用逗号分隔" />
       </div>
       <MilkdownProvider><div ref={editorContainerRef} className="editor-wrap"><EditorContent initialValue={body} onChange={setBody} /></div></MilkdownProvider>
-      <div className="token-box"><label>GitHub Fine-grained Token <span>仅用于本次发布，不会保存</span></label><input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="需要目标仓库 Contents: Read and write 权限" /></div>
-      {status && <p className="status">{status}</p>}
+      <p className="token-hint">Token 仅用于本次发布，不会保存到任何地方；刷新页面后需要重新输入。</p>
     </section>
   )
 }
