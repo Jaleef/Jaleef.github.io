@@ -38,3 +38,18 @@ tags: [React, TypeScript]
 npm run lint
 npm run build
 ```
+
+## 依赖维护须知
+
+**不要运行 `npm audit fix --force`。** 它为了解决 `@milkdown/react` 传递依赖里的 katex 漏洞，会把
+`@milkdown/react` 降到 `7.6.1`；该版本硬钉 `@milkdown/kit@7.6.1`，进而带入一份嵌套的
+`@milkdown/core@7.6.1`，与顶层 core 形成两份互不兼容的类型副本，CI 会报
+`Type 'Editor' is not assignable to type 'Editor'`。
+
+Milkdown 的多个包之间存在精确版本互钉关系，因此本项目将所有 `@milkdown/*` 锁定为**同一精确版本**
+（不使用 `^`）。升级时必须整组一起升，并在本地跑通 `npm run build`。
+
+剩余的低危告警来自 `@milkdown/crepe → remark-math → katex`，只影响数学公式渲染，
+而本站不使用数学公式（正文由 `marked` + `DOMPurify` 渲染）。用 `npm run audit` 查看详情。
+
+修改依赖后请务必同时提交 `package.json` 与 `package-lock.json`，因为 CI 使用 `npm ci` 严格按锁文件安装。
