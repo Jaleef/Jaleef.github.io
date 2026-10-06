@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { HashRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { HashRouter, Link, Route, Routes, useParams } from 'react-router-dom'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import { Editor, defaultValueCtx, rootCtx } from '@milkdown/core'
 import { nord } from '@milkdown/theme-nord'
@@ -10,6 +10,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { extractMath, katexOptions, restoreMath } from './lib/math'
 import { mathBlockPlugins } from './lib/math-block-node'
+import { createSlug, fetchExistingSha, fetchRepoSlugs, postPath, uniqueSlug } from './lib/slug'
 import { commonmarkWithoutEmptyLinePlaceholder, specialBlockPlugins } from './lib/special-block-plugins'
 import './App.css'
 
@@ -238,8 +239,15 @@ function EditorContent({ initialValue, onChange }: { initialValue: string; onCha
   return <Milkdown />
 }
 
+/** 发布时若文件名与仓库中已有文章冲突，交给用户决定用哪种方案。 */
+type PendingPlan = {
+  slug: string
+  sha: string
+  title: string
+  body: string
+}
+
 function WritePage() {
-  const navigate = useNavigate()
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
@@ -249,7 +257,16 @@ function WritePage() {
   const [token, setToken] = useState('')
   const [status, setStatus] = useState('')
   const [followCursor, setFollowCursor] = useState(false)
-  const generatedSlug = slug || title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
+  // 文件名冲突时待用户确认的方案
+  const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null)
+  const [pendingAlternative, setPendingAlternative] = useState('')
+
+  // 已被占用的 slug：本地构建产物里的文章
+  const takenSlugs = useMemo(() => new Set(posts.map((post) => post.slug)), [])
+  // 用户填了 slug 就用它，否则由标题推导；两者都会经过安全化处理
+  const preferredSlug = useMemo(() => createSlug(slug) || createSlug(title), [slug, title])
+  // 预览用：偏好名若与已有文章冲突，自动换成不冲突的名字
+  const resolvedSlug = useMemo(() => uniqueSlug(preferredSlug, takenSlugs), [preferredSlug, takenSlugs])
 
   useEffect(() => {
     if (!followCursor) return
@@ -282,24 +299,104 @@ function WritePage() {
     }
   }, [followCursor])
 
+  /**
+   * 真正把文章写入仓库。
+   *
+   * 关键点：GitHub Contents API 在**更新已存在的文件时必须带上该文件的 sha**，
+   * 否则会返回 422。旧实现在重复发布同一标题时必然失败，就是漏了这一步。
+   */
+  const writePost = async (options: { slug: string, sha?: string }) => {
+    const content = `---\ntitle: ${title.trim()}\ndescription: ${description.trim()}\ndate: ${new Date().toISOString().slice(0, 10)}\ntags: [${tags.split(',').map((tag) => tag.trim()).filter(Boolean).join(', ')}]\n---\n\n${body.trim()}\n`
+    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${postPath(options.slug)}`
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `${options.sha ? 'update' : 'post'}: ${title.trim()}`,
+        content: btoa(unescape(encodeURIComponent(content))),
+        ...(options.sha ? { sha: options.sha } : {}),
+      }),
+    })
+    if (response.ok) return
+    if (response.status === 401) throw new Error('Token 无效或已过期，请重新生成。')
+    if (response.status === 403) throw new Error('Token 权限不足，需要目标仓库的 Contents: Read and write。')
+    if (response.status === 404) throw new Error('找不到仓库，请检查 Token 是否有权访问该仓库。')
+    if (response.status === 422) throw new Error('文件名冲突：仓库中已存在同名文章，请换个标题或选择更新原文。')
+    throw new Error('发布失败，请检查 Token 权限和仓库地址。')
+  }
+
+  const finishPublish = (slug: string, existed: boolean) => {
+    setPendingPlan(null)
+    setPendingAlternative('')
+    setToken('')
+    setStatus(existed
+      ? `已更新文章 ${slug}.md。GitHub Pages 正在重新部署，约一分钟后刷新页面可见。`
+      : `发布成功：content/posts/${slug}.md。GitHub Pages 正在部署，约一分钟后可访问。`)
+  }
+
+  /** 冲突方案一：带上已有文件的 sha 覆盖原文。 */
+  const publishOverwrite = async (plan: PendingPlan) => {
+    setStatus('正在更新原文……')
+    try {
+      const fresh = await fetchExistingSha(repoOwner, repoName, plan.slug, token.trim())
+      if (!fresh) {
+        setStatus('该文件已不存在，请重新点击「发布文章」。')
+        return
+      }
+      await writePost({ slug: plan.slug, sha: fresh.sha })
+      finishPublish(plan.slug, true)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '更新失败，请稍后重试。')
+    }
+  }
+
+  /** 冲突方案二：用不冲突的新文件名发布，保留原文。 */
+  const publishAsNew = async (alternative: string) => {
+    setStatus('正在另存为新文章……')
+    try {
+      const existing = await fetchExistingSha(repoOwner, repoName, alternative, token.trim())
+      if (existing) {
+        setStatus(`备用名 ${alternative}.md 也已被占用，请修改标题或手动指定 slug。`)
+        return
+      }
+      await writePost({ slug: alternative })
+      finishPublish(alternative, false)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '发布失败，请稍后重试。')
+    }
+  }
+
   const publish = async () => {
     if (!title.trim() || !body.trim() || !token.trim()) {
       setStatus('请填写标题、正文和 GitHub Token。')
       return
     }
-    setStatus('正在发布……')
-    const path = `${postsDirectory}/${generatedSlug || `post-${Date.now()}`}.md`
-    const content = `---\ntitle: ${title.trim()}\ndescription: ${description.trim()}\ndate: ${new Date().toISOString().slice(0, 10)}\ntags: [${tags.split(',').map((tag) => tag.trim()).filter(Boolean).join(', ')}]\n---\n\n${body.trim()}\n`
+    setPendingPlan(null)
+    setStatus('正在检查文件名……')
     try {
-      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token.trim()}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `post: ${title.trim()}`, content: btoa(unescape(encodeURIComponent(content))) }),
-      })
-      if (!response.ok) throw new Error('GitHub API 发布失败，请检查 Token 权限和仓库地址。')
-      setStatus('发布成功，GitHub Pages 正在部署。')
-      setToken('')
-      setTimeout(() => navigate(`/post/${generatedSlug}`), 1200)
+      // 合并「本地已有文章」与「仓库里已有但尚未构建的文件」，避免悄悄覆盖旧文章
+      const repoSlugs = await fetchRepoSlugs(repoOwner, repoName, token.trim())
+      const occupied = new Set([...takenSlugs, ...repoSlugs])
+      const chosen = preferredSlug || `post-${Date.now()}`
+      const existing = await fetchExistingSha(repoOwner, repoName, chosen, token.trim())
+
+      // 文件名已被占用：交给用户决定「更新原文」还是「另存为新文章」
+      if (existing) {
+        setStatus('')
+        setPendingPlan({ slug: chosen, sha: existing.sha, title: title.trim(), body: body.trim() })
+        setPendingAlternative(uniqueSlug(chosen, occupied))
+        return
+      }
+
+      const safeSlug = occupied.has(chosen) ? uniqueSlug(chosen, occupied) : chosen
+      setStatus('正在发布……')
+      const recheck = safeSlug === chosen ? null : await fetchExistingSha(repoOwner, repoName, safeSlug, token.trim())
+      await writePost({ slug: safeSlug, sha: recheck?.sha })
+      finishPublish(safeSlug, Boolean(recheck))
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '发布失败，请稍后重试。')
     }
@@ -326,12 +423,38 @@ function WritePage() {
       </div>
       {/* 发布状态紧贴工具栏，出错时就在按钮正下方，一眼可见 */}
       {status && <p className="status toolbar-status">{status}</p>}
+      {/* 文件名冲突：给出两个明确的选择，而不是直接报错 */}
+      {pendingPlan && (
+        <div className="conflict-box">
+          <p className="conflict-title">仓库中已存在 <code>content/posts/{pendingPlan.slug}.md</code>，你想怎么处理？</p>
+          <div className="conflict-actions">
+            <button className="primary-button" onClick={() => publishOverwrite(pendingPlan)}>更新原文</button>
+            {pendingAlternative && (
+              <button className="secondary-button conflict-new" onClick={() => publishAsNew(pendingAlternative)}>
+                另存为新文章（{pendingAlternative}.md）
+              </button>
+            )}
+            <button className="secondary-button" onClick={() => setPendingPlan(null)}>取消</button>
+          </div>
+          <p className="conflict-hint">「更新原文」会覆盖仓库中的同名文件；「另存为新文章」会保留原文，用新的文件名发布。</p>
+        </div>
+      )}
       <input className="title-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="文章标题" />
       <div className="post-options">
-        <input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="URL slug（可选）" />
+        <input
+          value={slug}
+          onChange={(event) => setSlug(event.target.value)}
+          placeholder="URL slug（留空则按标题自动生成）"
+        />
         <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="文章摘要（可选）" />
         <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="标签，用逗号分隔" />
       </div>
+      {title.trim() && (
+        <p className="slug-preview">
+          将发布为 <code>{resolvedSlug}.md</code>
+          {slug.trim() && createSlug(slug) !== slug.trim() ? <span className="slug-warning">（自定义 slug 中的空格与特殊字符已替换为连字符）</span> : null}
+        </p>
+      )}
       <MilkdownProvider><div ref={editorContainerRef} className="editor-wrap"><EditorContent initialValue={body} onChange={setBody} /></div></MilkdownProvider>
       <p className="token-hint">Token 仅用于本次发布，不会保存到任何地方；刷新页面后需要重新输入。</p>
     </section>
