@@ -11,17 +11,9 @@ import DOMPurify from 'dompurify'
 import { extractMath, katexOptions, restoreMath } from './lib/math'
 import { mathBlockPlugins } from './lib/math-block-node'
 import { createSlug, fetchExistingSha, fetchRepoSlugs, postPath, uniqueSlug } from './lib/slug'
+import { parsePost, slugFromPath, sortPostsByDate, type Post } from './lib/post'
 import { commonmarkWithoutEmptyLinePlaceholder, specialBlockPlugins } from './lib/special-block-plugins'
 import './App.css'
-
-type Post = {
-  slug: string
-  title: string
-  description: string
-  date: string
-  tags: string[]
-  body: string
-}
 
 const postModules = import.meta.glob('../content/posts/*.md', {
   eager: true,
@@ -29,27 +21,9 @@ const postModules = import.meta.glob('../content/posts/*.md', {
   import: 'default',
 }) as Record<string, string>
 
-function parsePost(source: string, path: string): Post {
-  const match = source.match(/^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/)
-  const metadata = match?.[1] ?? ''
-  const body = match?.[2]?.trim() ?? source.trim()
-  const read = (key: string) => metadata.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'))?.[1]?.trim() ?? ''
-  const slug = path.split('/').pop()?.replace(/\.md$/, '') ?? ''
-  const tags = (read('tags').replace(/^\[|\]$/g, '').split(',').map((tag) => tag.trim()).filter(Boolean))
-
-  return {
-    slug,
-    title: read('title') || slug,
-    description: read('description'),
-    date: read('date') || '未设置日期',
-    tags,
-    body,
-  }
-}
-
-const posts = Object.entries(postModules)
-  .map(([path, source]) => parsePost(source, path))
-  .sort((a, b) => b.date.localeCompare(a.date))
+const posts = sortPostsByDate(
+  Object.entries(postModules).map(([path, source]) => parsePost(source, slugFromPath(path))),
+)
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -95,15 +69,18 @@ function HomePage() {
 
 function PostCard({ post }: { post: Post }) {
   return (
-    <Link className="post-card" to={`/post/${post.slug}`}>
-      <div className="post-date">{post.date}</div>
-      <div>
-        <h3>{post.title}</h3>
-        <p>{post.description || '点击阅读这篇文章。'}</p>
-        <div className="tags">{post.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-      </div>
-      <span className="arrow">↗</span>
-    </Link>
+    <div className="post-card-row">
+      <Link className="post-card" to={`/post/${post.slug}`}>
+        <div className="post-date">{post.date}</div>
+        <div>
+          <h3>{post.title}</h3>
+          <p>{post.description || '点击阅读这篇文章。'}</p>
+          <div className="tags">{post.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+        </div>
+        <span className="arrow">↗</span>
+      </Link>
+      <Link className="edit-link" to={`/write/${encodeURIComponent(post.slug)}`} title="编辑并重新发布这篇文章">编辑</Link>
+    </div>
   )
 }
 
@@ -206,7 +183,10 @@ function PostPage() {
 
   return (
     <article className="post-page">
-      <Link className="back-link" to="/">← 返回文章列表</Link>
+      <div className="post-page-nav">
+        <Link className="back-link" to="/">← 返回文章列表</Link>
+        <Link className="edit-link" to={`/write/${encodeURIComponent(post.slug)}`}>编辑并重新发布</Link>
+      </div>
       <p className="eyebrow">{post.date}</p>
       <h1>{post.title}</h1>
       <p className="post-description">{post.description}</p>
@@ -243,17 +223,33 @@ function EditorContent({ initialValue, onChange }: { initialValue: string; onCha
 type PendingPlan = {
   slug: string
   sha: string
-  title: string
-  body: string
 }
 
 function WritePage() {
+  const { slug: routeSlug } = useParams()
   const editorContainerRef = useRef<HTMLDivElement>(null)
-  const [title, setTitle] = useState('')
+
+  /**
+   * 编辑模式：路由带 slug 时载入已发布文章。
+   * 目前只能载入已进入构建产物的文章（本地或在仓库中已构建的），
+   * 仓库里刚发布、还没构建的文件无法在浏览器里直接读原文。
+   */
+  const editingPost = useMemo(
+    () => (routeSlug ? posts.find((item) => item.slug === decodeURIComponent(routeSlug)) ?? null : null),
+    [routeSlug],
+  )
+
+  const [title, setTitle] = useState(editingPost?.title ?? '')
+  // slug 输入框刻意留空：空值表示「沿用原标题推导出的文件名」，
+  // 编辑模式下则沿用被编辑文章现有的文件名（见 preferredSlug）。
+  // 预填原文件名会让「改标题却不改名」变得难以察觉。
   const [slug, setSlug] = useState('')
-  const [description, setDescription] = useState('')
-  const [tags, setTags] = useState('')
-  const [body, setBody] = useState('# 开始写作\n\n在这里写下你的文章内容……\n\n数学公式用 LaTeX 语法：行内写作 $E = mc^2$，独立成行用两个美元符号包裹。\n')
+  const [description, setDescription] = useState(editingPost?.description ?? '')
+  const [tags, setTags] = useState(editingPost?.tags.join(', ') ?? '')
+  const [body, setBody] = useState(
+    editingPost?.body
+    ?? '# 开始写作\n\n在这里写下你的文章内容……\n\n数学公式用 LaTeX 语法：行内写作 $E = mc^2$，独立成行用两个美元符号包裹。\n',
+  )
   const [token, setToken] = useState('')
   const [status, setStatus] = useState('')
   const [followCursor, setFollowCursor] = useState(false)
@@ -261,12 +257,30 @@ function WritePage() {
   const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null)
   const [pendingAlternative, setPendingAlternative] = useState('')
 
+  // 正在编辑的文章原始 slug（用于原地更新 / 改名后清理旧文件）
+  const originalSlug = editingPost?.slug ?? ''
+  // 用户是否手动改过 slug 输入框。
+  // 编辑模式下输入框会预填原文件名；若不区分「继承来的值」与「用户改过的值」，
+  // 改标题时就永远沿用旧文件名，标题与文件名会脱节。
+  const [slugEdited, setSlugEdited] = useState(false)
+  // 每次发布都用当天日期，因此「修改重发」会把时间戳刷新为最新
+  const today = new Date().toISOString().slice(0, 10)
+
   // 已被占用的 slug：本地构建产物里的文章
   const takenSlugs = useMemo(() => new Set(posts.map((post) => post.slug)), [])
-  // 用户填了 slug 就用它，否则由标题推导；两者都会经过安全化处理
-  const preferredSlug = useMemo(() => createSlug(slug) || createSlug(title), [slug, title])
-  // 预览用：偏好名若与已有文章冲突，自动换成不冲突的名字
-  const resolvedSlug = useMemo(() => uniqueSlug(preferredSlug, takenSlugs), [preferredSlug, takenSlugs])
+  // 优先级：用户手填的 slug > 编辑时继承的原文件名 > 由标题推导
+  const preferredSlug = useMemo(() => (
+    createSlug(slug) || (slugEdited ? '' : originalSlug) || createSlug(title)
+  ), [slug, slugEdited, originalSlug, title])
+  // 预览用：偏好名若与已有文章冲突，自动换成不冲突的名字。
+  // 编辑模式下当前文章自己不算冲突，否则改标题时会被误判成重名。
+  const resolvedSlug = useMemo(() => {
+    const others = new Set(takenSlugs)
+    if (originalSlug) others.delete(originalSlug)
+    return uniqueSlug(preferredSlug, others)
+  }, [preferredSlug, takenSlugs, originalSlug])
+  // 标题或手动 slug 被改动，会导致文件名变化
+  const slugChanged = Boolean(originalSlug) && resolvedSlug !== originalSlug
 
   useEffect(() => {
     if (!followCursor) return
@@ -299,28 +313,41 @@ function WritePage() {
     }
   }, [followCursor])
 
+  const commitOptions = {
+    headers: {
+      Authorization: `Bearer ${token.trim()}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+  }
+
+  /** 按当前表单内容拼出完整 Markdown；date 用最新时间戳。 */
+  const buildMarkdown = (date: string) => (
+    `---\ntitle: ${title.trim()}\ndescription: ${description.trim()}\ndate: ${date}\ntags: [${tags.split(',').map((tag) => tag.trim()).filter(Boolean).join(', ')}]\n---\n\n${body.trim()}\n`
+  )
+
   /**
    * 真正把文章写入仓库。
    *
    * 关键点：GitHub Contents API 在**更新已存在的文件时必须带上该文件的 sha**，
    * 否则会返回 422。旧实现在重复发布同一标题时必然失败，就是漏了这一步。
+   *
+   * `date` 为写入 Front Matter 的日期：新建与「修改重发」都用当天日期，
+   * 因此重新发布一次就会把时间戳刷新为最新。
    */
-  const writePost = async (options: { slug: string, sha?: string }) => {
-    const content = `---\ntitle: ${title.trim()}\ndescription: ${description.trim()}\ndate: ${new Date().toISOString().slice(0, 10)}\ntags: [${tags.split(',').map((tag) => tag.trim()).filter(Boolean).join(', ')}]\n---\n\n${body.trim()}\n`
-    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${postPath(options.slug)}`
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
+  const writePost = async (options: { slug: string, sha?: string, date: string, message?: string }) => {
+    const response = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${postPath(options.slug)}`,
+      {
+        method: 'PUT',
+        ...commitOptions,
+        body: JSON.stringify({
+          message: options.message ?? `${options.sha ? 'update' : 'post'}: ${title.trim()}`,
+          content: btoa(unescape(encodeURIComponent(buildMarkdown(options.date)))),
+          ...(options.sha ? { sha: options.sha } : {}),
+        }),
       },
-      body: JSON.stringify({
-        message: `${options.sha ? 'update' : 'post'}: ${title.trim()}`,
-        content: btoa(unescape(encodeURIComponent(content))),
-        ...(options.sha ? { sha: options.sha } : {}),
-      }),
-    })
+    )
     if (response.ok) return
     if (response.status === 401) throw new Error('Token 无效或已过期，请重新生成。')
     if (response.status === 403) throw new Error('Token 权限不足，需要目标仓库的 Contents: Read and write。')
@@ -329,13 +356,33 @@ function WritePage() {
     throw new Error('发布失败，请检查 Token 权限和仓库地址。')
   }
 
-  const finishPublish = (slug: string, existed: boolean) => {
+  /** 删除仓库中的旧文件（改名发布后清理用）。返回是否成功。 */
+  const deleteFile = async (targetSlug: string): Promise<boolean> => {
+    const existing = await fetchExistingSha(repoOwner, repoName, targetSlug, token.trim())
+    if (!existing) return false
+    const response = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${postPath(targetSlug)}`,
+      {
+        method: 'DELETE',
+        ...commitOptions,
+        body: JSON.stringify({ message: `chore: 重命名前移除旧文件 ${targetSlug}.md`, sha: existing.sha }),
+      },
+    )
+    return response.ok
+  }
+
+  const finishPublish = (publishedSlug: string, kind: 'created' | 'updated' | 'renamed', extra?: string) => {
     setPendingPlan(null)
     setPendingAlternative('')
     setToken('')
-    setStatus(existed
-      ? `已更新文章 ${slug}.md。GitHub Pages 正在重新部署，约一分钟后刷新页面可见。`
-      : `发布成功：content/posts/${slug}.md。GitHub Pages 正在部署，约一分钟后可访问。`)
+    const note = extra ? ` ${extra}` : ''
+    if (kind === 'created') {
+      setStatus(`发布成功：content/posts/${publishedSlug}.md。GitHub Pages 正在部署，约一分钟后可访问。${note}`)
+    } else if (kind === 'updated') {
+      setStatus(`已重新发布 ${publishedSlug}.md，日期已更新为今天。GitHub Pages 正在重新部署，约一分钟后刷新可见。${note}`)
+    } else {
+      setStatus(`已发布为新文件 ${publishedSlug}.md，日期已更新为今天。${note}`)
+    }
   }
 
   /** 冲突方案一：带上已有文件的 sha 覆盖原文。 */
@@ -347,8 +394,8 @@ function WritePage() {
         setStatus('该文件已不存在，请重新点击「发布文章」。')
         return
       }
-      await writePost({ slug: plan.slug, sha: fresh.sha })
-      finishPublish(plan.slug, true)
+      await writePost({ slug: plan.slug, sha: fresh.sha, date: today })
+      finishPublish(plan.slug, 'updated')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '更新失败，请稍后重试。')
     }
@@ -363,8 +410,8 @@ function WritePage() {
         setStatus(`备用名 ${alternative}.md 也已被占用，请修改标题或手动指定 slug。`)
         return
       }
-      await writePost({ slug: alternative })
-      finishPublish(alternative, false)
+      await writePost({ slug: alternative, date: today })
+      finishPublish(alternative, 'renamed')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '发布失败，请稍后重试。')
     }
@@ -376,18 +423,38 @@ function WritePage() {
       return
     }
     setPendingPlan(null)
+
+    // 编辑模式：默认原地更新同一文件，时间戳刷新为今天
+    if (originalSlug && resolvedSlug === originalSlug) {
+      setStatus('正在重新发布……')
+      try {
+        const existing = await fetchExistingSha(repoOwner, repoName, originalSlug, token.trim())
+        if (!existing) {
+          setStatus(`仓库中已找不到 ${originalSlug}.md，可能已被删除。`)
+          return
+        }
+        await writePost({ slug: originalSlug, sha: existing.sha, date: today })
+        finishPublish(originalSlug, 'updated')
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : '重新发布失败，请稍后重试。')
+      }
+      return
+    }
+
     setStatus('正在检查文件名……')
     try {
       // 合并「本地已有文章」与「仓库里已有但尚未构建的文件」，避免悄悄覆盖旧文章
       const repoSlugs = await fetchRepoSlugs(repoOwner, repoName, token.trim())
       const occupied = new Set([...takenSlugs, ...repoSlugs])
+      // 编辑模式下自己不算占用，否则改名时会把自己的旧文件当成冲突
+      if (originalSlug) occupied.delete(originalSlug)
       const chosen = preferredSlug || `post-${Date.now()}`
       const existing = await fetchExistingSha(repoOwner, repoName, chosen, token.trim())
 
       // 文件名已被占用：交给用户决定「更新原文」还是「另存为新文章」
       if (existing) {
         setStatus('')
-        setPendingPlan({ slug: chosen, sha: existing.sha, title: title.trim(), body: body.trim() })
+        setPendingPlan({ slug: chosen, sha: existing.sha })
         setPendingAlternative(uniqueSlug(chosen, occupied))
         return
       }
@@ -395,8 +462,15 @@ function WritePage() {
       const safeSlug = occupied.has(chosen) ? uniqueSlug(chosen, occupied) : chosen
       setStatus('正在发布……')
       const recheck = safeSlug === chosen ? null : await fetchExistingSha(repoOwner, repoName, safeSlug, token.trim())
-      await writePost({ slug: safeSlug, sha: recheck?.sha })
-      finishPublish(safeSlug, Boolean(recheck))
+      await writePost({ slug: safeSlug, sha: recheck?.sha, date: today })
+
+      // 改了标题/文件名时，把旧文件一并移除，避免留下重复文章
+      let cleanupNote = ''
+      if (originalSlug && originalSlug !== safeSlug) {
+        const removed = await deleteFile(originalSlug)
+        cleanupNote = removed ? `旧的 ${originalSlug}.md 已移除。` : `注意：旧的 ${originalSlug}.md 删除失败，请手动处理。`
+      }
+      finishPublish(safeSlug, originalSlug ? 'renamed' : 'created', cleanupNote)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '发布失败，请稍后重试。')
     }
@@ -405,7 +479,7 @@ function WritePage() {
   return (
     <section className="write-page">
       <div className="write-toolbar">
-        <Link className="back-link" to="/">← 返回</Link>
+        <Link className="back-link" to={originalSlug ? `/post/${encodeURIComponent(originalSlug)}` : '/'}>← 返回</Link>
         <div className="write-actions">
           {/* Token 与发布按钮同处一行：点完发布立刻能看到结果，不必滚到底部检查 */}
           <input
@@ -418,9 +492,18 @@ function WritePage() {
           />
           <button className={`secondary-button ${followCursor ? 'is-active' : ''}`} onClick={() => setFollowCursor((enabled) => !enabled)} aria-pressed={followCursor}>↕ 跟随光标</button>
           <button className="secondary-button" onClick={() => setToken('')}>清除 Token</button>
-          <button className="primary-button" onClick={publish}>发布文章</button>
+          <button className="primary-button" onClick={publish}>{originalSlug ? '重新发布' : '发布文章'}</button>
         </div>
       </div>
+      {/* 编辑模式提示：明确当前在改哪一篇、日期会怎么变 */}
+      {originalSlug && (
+        <p className="edit-banner">
+          正在编辑 <code>{originalSlug}.md</code>
+          {slugChanged
+            ? <span> · 文件名将改为 <code>{resolvedSlug}.md</code>，发布后会移除旧文件</span>
+            : <span> · 发布日期将更新为 {today}</span>}
+        </p>
+      )}
       {/* 发布状态紧贴工具栏，出错时就在按钮正下方，一眼可见 */}
       {status && <p className="status toolbar-status">{status}</p>}
       {/* 文件名冲突：给出两个明确的选择，而不是直接报错 */}
@@ -443,7 +526,7 @@ function WritePage() {
       <div className="post-options">
         <input
           value={slug}
-          onChange={(event) => setSlug(event.target.value)}
+          onChange={(event) => { setSlug(event.target.value); setSlugEdited(true) }}
           placeholder="URL slug（留空则按标题自动生成）"
         />
         <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="文章摘要（可选）" />
@@ -452,7 +535,11 @@ function WritePage() {
       {title.trim() && (
         <p className="slug-preview">
           将发布为 <code>{resolvedSlug}.md</code>
-          {slug.trim() && createSlug(slug) !== slug.trim() ? <span className="slug-warning">（自定义 slug 中的空格与特殊字符已替换为连字符）</span> : null}
+          {slug.trim()
+            ? (createSlug(slug) !== slug.trim()
+              ? <span className="slug-warning">（自定义 slug 中的空格与特殊字符已替换为连字符）</span>
+              : null)
+            : <span className="slug-warning">{originalSlug ? '（沿用现有文件名，清空标题或修改 slug 可改名）' : '（由标题自动生成）'}</span>}
         </p>
       )}
       <MilkdownProvider><div ref={editorContainerRef} className="editor-wrap"><EditorContent initialValue={body} onChange={setBody} /></div></MilkdownProvider>
@@ -465,7 +552,7 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'
   }, [])
-  return <HashRouter><Layout><Routes><Route path="/" element={<HomePage />} /><Route path="/post/:slug" element={<PostPage />} /><Route path="/write" element={<WritePage />} /><Route path="*" element={<HomePage />} /></Routes></Layout></HashRouter>
+  return <HashRouter><Layout><Routes><Route path="/" element={<HomePage />} /><Route path="/post/:slug" element={<PostPage />} /><Route path="/write" element={<WritePage />} /><Route path="/write/:slug" element={<WritePage />} /><Route path="*" element={<HomePage />} /></Routes></Layout></HashRouter>
 }
 
 export default App
