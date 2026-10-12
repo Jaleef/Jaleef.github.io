@@ -1,13 +1,14 @@
 import DOMPurify from 'dompurify'
 import katex from 'katex'
+import { marked } from 'marked'
 import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
 import type { Plugin } from 'unified'
 
 /**
- * 编辑器（Milkdown + @milkdown/plugin-math）与查看器（marked）共用同一套 KaTeX 配置，
- * 保证同一段 LaTeX 在编辑器和文章页渲染结果一致。
+ * KaTeX 配置：编辑预览与文章页共用同一套，
+ * 保证「编辑时看到的」与「发布后读者看到的」一致。
  */
 export const katexOptions: katex.KatexOptions = {
   throwOnError: false, // 语法错误时就地显示原文，而不是抛出异常导致整页白屏
@@ -49,15 +50,21 @@ export function renderMath(latex: string, displayMode: boolean): string {
   return safe
 }
 
+/** 把 Markdown 渲染成与文章页一致的 HTML（含数学公式）。 */
+export function renderMarkdown(source: string): string {
+  const { markdown, expressions } = extractMath(source)
+  const sanitized = String(DOMPurify.sanitize(marked.parse(markdown) as string))
+  return restoreMath(sanitized, expressions)
+}
+
 /* ------------------------------------------------------------------ *
- * 以下供查看器（marked）使用。
+ * Markdown → HTML 的转换（编辑器预览与文章页共用）
  *
- * marked 不内置数学公式支持，但项目里已经有 remark-math（@milkdown/plugin-math
- * 的依赖）。做法是：用 unified + remark-parse + remark-math 解析一遍 Markdown，
+ * marked 不内置数学公式支持，这里用 remark-math 负责识别
+ * `$...$` 与 `$$...$$`：先用 unified + remark-parse + remark-math 解析一遍，
  * 只为了拿到公式节点的准确偏移量，把它们替换成不透明占位符交给 marked 处理正文，
  * 最后再把占位符换回 KaTeX 渲染结果。
- * 这样能复用 remark-math 的解析规则，使编辑器与查看器对同一段 LaTeX
- * 给出一致的识别结果（包括代码块里的 $ 不会被误判）。
+ * 这样能复用 remark-math 的解析规则，代码块里的 $ 不会被误判。
  * ------------------------------------------------------------------ */
 
 type Point = { line: number, column: number, offset?: number }

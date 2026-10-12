@@ -1,18 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { HashRouter, Link, Route, Routes, useParams } from 'react-router-dom'
-import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
-import { Editor, defaultValueCtx, rootCtx } from '@milkdown/core'
-import { nord } from '@milkdown/theme-nord'
-import { listener, listenerCtx } from '@milkdown/plugin-listener'
-import { katexOptionsCtx, math } from '@milkdown/plugin-math'
-import { upload } from '@milkdown/plugin-upload'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-import { extractMath, katexOptions, restoreMath } from './lib/math'
-import { mathBlockPlugins } from './lib/math-block-node'
+import { renderMarkdown } from './lib/math'
+import { MarkdownEditor } from './lib/MarkdownEditor'
 import { createSlug, fetchExistingSha, fetchRepoSlugs, postPath, uniqueSlug } from './lib/slug'
 import { parsePost, slugFromPath, sortPostsByDate, type Post } from './lib/post'
-import { commonmarkWithoutEmptyLinePlaceholder, specialBlockPlugins } from './lib/special-block-plugins'
 import './App.css'
 
 const postModules = import.meta.glob('../content/posts/*.md', {
@@ -171,14 +162,8 @@ function DangerZone({ post }: { post: Post }) {
 function PostPage() {
   const { slug } = useParams()
   const post = posts.find((item) => item.slug === slug)
-  // 先把公式抽成占位符再交给 marked，最后用 KaTeX 结果还原；
-  // 用 useMemo 避免切换主题等重渲染时反复解析与渲染公式。
-  const html = useMemo(() => {
-    if (!post) return ''
-    const { markdown, expressions } = extractMath(post.body)
-    const sanitized = DOMPurify.sanitize(marked.parse(markdown) as string)
-    return restoreMath(sanitized, expressions)
-  }, [post])
+  // 用与编辑器预览完全相同的渲染管线，保证「预览所见」即「读者所见」
+  const html = useMemo(() => (post ? renderMarkdown(post.body) : ''), [post])
   if (!post) return <div className="not-found"><h1>找不到这篇文章</h1><Link to="/">返回文章列表</Link></div>
 
   return (
@@ -198,27 +183,6 @@ function PostPage() {
   )
 }
 
-function EditorContent({ initialValue, onChange }: { initialValue: string; onChange: (value: string) => void }) {
-  useEditor((root) => Editor.make()
-    .config((ctx) => {
-      ctx.set(rootCtx, root)
-      ctx.set(defaultValueCtx, initialValue)
-      ctx.set(katexOptionsCtx.key, katexOptions)
-      ctx.get(listenerCtx).markdownUpdated((_, markdown) => onChange(markdown))
-    })
-    .config(nord)
-    .use(commonmarkWithoutEmptyLinePlaceholder)
-    .use(listener)
-    // 官方 math 插件提供 remark 解析、KaTeX 配置、行内公式与 `$$ ` 输入规则
-    .use(math)
-    // 再为 math_block 节点挂上可编辑视图，解决「光标进不去、公式无法修改」的问题
-    .use(mathBlockPlugins)
-    // 保证代码块、公式块等特殊块后面总能继续写（末尾自动补段落 + 方向键兜底）
-    .use(specialBlockPlugins)
-    .use(upload))
-  return <Milkdown />
-}
-
 /** 发布时若文件名与仓库中已有文章冲突，交给用户决定用哪种方案。 */
 type PendingPlan = {
   slug: string
@@ -227,7 +191,6 @@ type PendingPlan = {
 
 function WritePage() {
   const { slug: routeSlug } = useParams()
-  const editorContainerRef = useRef<HTMLDivElement>(null)
 
   /**
    * 编辑模式：路由带 slug 时载入已发布文章。
@@ -252,7 +215,6 @@ function WritePage() {
   )
   const [token, setToken] = useState('')
   const [status, setStatus] = useState('')
-  const [followCursor, setFollowCursor] = useState(false)
   // 文件名冲突时待用户确认的方案
   const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null)
   const [pendingAlternative, setPendingAlternative] = useState('')
@@ -281,37 +243,6 @@ function WritePage() {
   }, [preferredSlug, takenSlugs, originalSlug])
   // 标题或手动 slug 被改动，会导致文件名变化
   const slugChanged = Boolean(originalSlug) && resolvedSlug !== originalSlug
-
-  useEffect(() => {
-    if (!followCursor) return
-
-    const keepCursorCentered = () => {
-      const editor = editorContainerRef.current?.querySelector('.editor')
-      const selection = window.getSelection()
-      if (!editor || !selection?.rangeCount || !selection.anchorNode || !editor.contains(selection.anchorNode)) return
-
-      const range = selection.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
-      if (!rect.height && !rect.width) return
-
-      const viewportCenter = window.innerHeight / 2
-      const cursorCenter = rect.top + rect.height / 2
-      const distance = cursorCenter - viewportCenter
-      if (Math.abs(distance) > 32) {
-        window.scrollBy({ top: distance, behavior: 'smooth' })
-      }
-    }
-
-    const editor = editorContainerRef.current
-    editor?.addEventListener('keyup', keepCursorCentered)
-    editor?.addEventListener('mouseup', keepCursorCentered)
-    document.addEventListener('selectionchange', keepCursorCentered)
-    return () => {
-      editor?.removeEventListener('keyup', keepCursorCentered)
-      editor?.removeEventListener('mouseup', keepCursorCentered)
-      document.removeEventListener('selectionchange', keepCursorCentered)
-    }
-  }, [followCursor])
 
   const commitOptions = {
     headers: {
@@ -490,7 +421,6 @@ function WritePage() {
             placeholder="GitHub Token（Contents: Read and write）"
             aria-label="GitHub Fine-grained Token"
           />
-          <button className={`secondary-button ${followCursor ? 'is-active' : ''}`} onClick={() => setFollowCursor((enabled) => !enabled)} aria-pressed={followCursor}>↕ 跟随光标</button>
           <button className="secondary-button" onClick={() => setToken('')}>清除 Token</button>
           <button className="primary-button" onClick={publish}>{originalSlug ? '重新发布' : '发布文章'}</button>
         </div>
@@ -542,17 +472,28 @@ function WritePage() {
             : <span className="slug-warning">{originalSlug ? '（沿用现有文件名，清空标题或修改 slug 可改名）' : '（由标题自动生成）'}</span>}
         </p>
       )}
-      <MilkdownProvider><div ref={editorContainerRef} className="editor-wrap"><EditorContent initialValue={body} onChange={setBody} /></div></MilkdownProvider>
+      <MarkdownEditor value={body} onChange={setBody} />
       <p className="token-hint">Token 仅用于本次发布，不会保存到任何地方；刷新页面后需要重新输入。</p>
     </section>
   )
+}
+
+/**
+ * 编辑器需要按 slug 重新挂载。
+ * 表单 state 只在首次挂载时从文章回填，若路由参数变化而组件被复用，
+ * 从「写新文章」切到「编辑某篇」时不会重新载入（hash 路由下是原地跳转，很常见）。
+ * 用 key 强制重挂载可彻底避免这类陈旧状态。
+ */
+function WriteRoute() {
+  const { slug } = useParams()
+  return <WritePage key={slug ? decodeURIComponent(slug) : 'new'} />
 }
 
 function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'
   }, [])
-  return <HashRouter><Layout><Routes><Route path="/" element={<HomePage />} /><Route path="/post/:slug" element={<PostPage />} /><Route path="/write" element={<WritePage />} /><Route path="/write/:slug" element={<WritePage />} /><Route path="*" element={<HomePage />} /></Routes></Layout></HashRouter>
+  return <HashRouter><Layout><Routes><Route path="/" element={<HomePage />} /><Route path="/post/:slug" element={<PostPage />} /><Route path="/write" element={<WriteRoute />} /><Route path="/write/:slug" element={<WriteRoute />} /><Route path="*" element={<HomePage />} /></Routes></Layout></HashRouter>
 }
 
 export default App

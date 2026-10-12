@@ -1,6 +1,13 @@
 # Jaleef Blog
 
-一个基于 React、TypeScript、Vite 和 GitHub Pages 的轻量博客，支持在 `/write` 使用接近 Typora 的所见即所得编辑器写作，并直接发布到 GitHub 仓库。
+一个基于 React、TypeScript、Vite 和 GitHub Pages 的轻量博客。写作与编辑在 `/write` 进行，采用**左右分栏的 Markdown 编辑器**（左侧写源文件、右侧实时预览），成稿后直接发布到 GitHub 仓库。
+
+## 编辑器
+
+- 左栏是 Markdown 源文件，右栏预览；预览复用与文章页完全相同的渲染管线，所见即所得。
+- 支持行内公式 `$...$` 与块级公式 `$$...$$`（KaTeX 渲染）。
+- Tab 键插入两个空格；滚动时右栏按比例跟随。
+- 预览渲染在输入间隙进行（`useDeferredValue`），长文输入不会卡顿。
 
 ## 本地开发
 
@@ -41,15 +48,12 @@ npm run build
 
 ## 依赖维护须知
 
-**不要运行 `npm audit fix --force`。** 它为了解决 `@milkdown/react` 传递依赖里的 katex 漏洞，会把
-`@milkdown/react` 降到 `7.6.1`；该版本硬钉 `@milkdown/kit@7.6.1`，进而带入一份嵌套的
-`@milkdown/core@7.6.1`，与顶层 core 形成两份互不兼容的类型副本，CI 会报
-`Type 'Editor' is not assignable to type 'Editor'`。
+**不要运行 `npm audit fix --force`。** 它为了消除 katex 的传递依赖告警，会选择降级方案而不是升级；
+历史上它把 `@milkdown/react` 降到 `7.6.1`，连带引入一份嵌套的旧 `@milkdown/core`，
+使 CI 报出 `Type 'Editor' is not assignable to type 'Editor'`。
 
-Milkdown 的多个包之间存在精确版本互钉关系，因此本项目将所有 `@milkdown/*` 锁定为**同一精确版本**
-（不使用 `^`）。升级时必须整组一起升，并在本地跑通 `npm run build`。
-
-剩余的低危告警来自 `@milkdown/crepe → remark-math → katex`，只影响数学公式渲染，
-而本站不使用数学公式（正文由 `marked` + `DOMPurify` 渲染）。用 `npm run audit` 查看详情。
+剩余的低危告警来自 `remark-math → micromark-extension-math → katex`，只影响数学公式渲染；
+该漏洞需要主动用 KaTeX 解析不可信输入才会触发，本站公式均由作者自己书写，
+且渲染结果还会经过一层 `DOMPurify` 消毒。用 `npm run audit` 查看详情。
 
 修改依赖后请务必同时提交 `package.json` 与 `package-lock.json`，因为 CI 使用 `npm ci` 严格按锁文件安装。
