@@ -1,6 +1,7 @@
 /* 文章详情页 */
 .post-page {
-  max-width: 740px;
+  /* max-width: 740px; */
+  width: 75%;
   margin: auto;
   padding: 70px 0 100px;
 }

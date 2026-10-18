@@ -4,9 +4,11 @@
 }
 .site-header {
   height: 76px;
-  max-width: 1080px;
+  width: 75%;
+  max-width: none;
   margin: auto;
   padding: 0 32px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,14 +47,18 @@ nav a:hover {
   font-size: 20px;
 }
 main {
-  max-width: 1080px;
+  width: 75%;
+  max-width: none;
   margin: auto;
   padding: 0 32px;
+  box-sizing: border-box;
 }
 footer {
+  width: 75%;
+  max-width: none;
   color: var(--muted);
-  max-width: 1080px;
   padding: 25px 32px 40px;
   margin: auto;
   font-size: 12px;
+  box-sizing: border-box;
 }

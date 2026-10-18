@@ -1,7 +1,8 @@
 /* 首页：开场白 + 文章卡片列表 */
 .home-page {
   padding: 100px 0 80px;
-  max-width: 780px;
+  /* max-width: 780px; */
+  width: 75%;
   margin: auto;
 }
 .intro h1 {

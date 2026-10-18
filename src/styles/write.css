@@ -1,6 +1,7 @@
 /* 写作页：工具栏、表单、发布状态、冲突选择框 */
 .write-page {
-  max-width: 1240px;
+  /* max-width: 1240px; */
+  width: 100%;
   margin: auto;
   padding: 35px 0 100px;
 }
