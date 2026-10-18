@@ -13,16 +13,18 @@
 
 /** 把标题转换成安全的文件名片段；无法得到有效字符时返回空字符串。 */
 export function createSlug(title: string): string {
-  return title
-    .normalize('NFKC')
-    .toLowerCase()
-    .trim()
-    // 保留所有语言的字母、数字，以及空格、连字符、下划线
-    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
-    // 空白与下划线折叠成连字符
-    .replace(/[\s_]+/g, '-')
-    // 去掉首尾多余连字符
-    .replace(/^-+|-+$/g, '')
+  return (
+    title
+      .normalize("NFKC")
+      .toLowerCase()
+      .trim()
+      // 保留所有语言的字母、数字，以及空格、连字符、下划线
+      .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+      // 空白与下划线折叠成连字符
+      .replace(/[\s_]+/g, "-")
+      // 去掉首尾多余连字符
+      .replace(/^-+|-+$/g, "")
+  );
 }
 
 /**
@@ -30,19 +32,19 @@ export function createSlug(title: string): string {
  * 全部候选都不可用时退回时间戳，保证一定得到合法文件名。
  */
 export function uniqueSlug(base: string, taken: Iterable<string>): string {
-  const used = new Set(taken)
-  const fallback = base || `post-${Date.now()}`
-  if (!used.has(fallback)) return fallback
+  const used = new Set(taken);
+  const fallback = base || `post-${Date.now()}`;
+  if (!used.has(fallback)) return fallback;
   for (let index = 2; index < 500; index += 1) {
-    const candidate = `${fallback}-${index}`
-    if (!used.has(candidate)) return candidate
+    const candidate = `${fallback}-${index}`;
+    if (!used.has(candidate)) return candidate;
   }
-  return `${fallback}-${Date.now()}`
+  return `${fallback}-${Date.now()}`;
 }
 
 /** 文章在仓库中的路径。slug 可能是非 ASCII，交给 encodeURIComponent 处理。 */
 export function postPath(slug: string): string {
-  return `content/posts/${slug}.md`
+  return `content/posts/${slug}.md`;
 }
 
 /**
@@ -59,16 +61,21 @@ export async function fetchExistingSha(
   try {
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/${postPath(slug)}`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } },
-    )
-    if (response.status === 404) return null
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+    if (response.status === 404) return null;
     if (response.ok) {
-      const data = await response.json() as { sha?: string }
-      return data.sha ? { sha: data.sha } : undefined
+      const data = (await response.json()) as { sha?: string };
+      return data.sha ? { sha: data.sha } : undefined;
     }
-    return undefined
+    return undefined;
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -77,22 +84,30 @@ export async function fetchExistingSha(
  * 用来发现「仓库里已存在、但当前构建产物还没有」的文件，
  * 避免生成的 slug 悄悄覆盖它们。令牌不可用时返回空数组。
  */
-export async function fetchRepoSlugs(owner: string, repo: string, token: string): Promise<string[]> {
+export async function fetchRepoSlugs(
+  owner: string,
+  repo: string,
+  token: string,
+): Promise<string[]> {
   try {
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/content/posts`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } },
-    )
-    if (!response.ok) return []
-    const entries = await response.json() as { name?: string }[]
-    if (!Array.isArray(entries)) return []
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+    if (!response.ok) return [];
+    const entries = (await response.json()) as { name?: string }[];
+    if (!Array.isArray(entries)) return [];
     return entries
-      .map((entry) => entry.name ?? '')
-      .filter((name) => name.toLowerCase().endsWith('.md'))
+      .map((entry) => entry.name ?? "")
+      .filter((name) => name.toLowerCase().endsWith(".md"))
       .map((name) => name.slice(0, -3))
-      .filter(Boolean)
+      .filter(Boolean);
   } catch {
-    return []
+    return [];
   }
 }
-

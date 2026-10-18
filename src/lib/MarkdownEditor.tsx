@@ -1,5 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useRef } from 'react'
-import { renderMarkdown } from './math'
+import { useDeferredValue, useEffect, useMemo, useRef } from "react";
+import { renderMarkdown } from "./math";
 
 /**
  * 分栏 Markdown 编辑器：左侧写源文件，右侧实时预览。
@@ -9,50 +9,54 @@ import { renderMarkdown } from './math'
  */
 
 type MarkdownEditorProps = {
-  value: string
-  onChange: (value: string) => void
-  className?: string
-}
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+};
 
-export function MarkdownEditor({ value, onChange, className }: MarkdownEditorProps) {
-  const sourceRef = useRef<HTMLTextAreaElement>(null)
-  const previewRef = useRef<HTMLDivElement>(null)
+export function MarkdownEditor({
+  value,
+  onChange,
+  className,
+}: MarkdownEditorProps) {
+  const sourceRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   // 输入时先更新文本域，预览用延迟值渲染，避免长文输入卡顿
-  const deferredValue = useDeferredValue(value)
-  const html = useMemo(() => renderMarkdown(deferredValue), [deferredValue])
+  const deferredValue = useDeferredValue(value);
+  const html = useMemo(() => renderMarkdown(deferredValue), [deferredValue]);
 
   // Tab 插入两个空格，而不是把焦点移走（写代码块/缩进时必需）
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Tab') return
-    event.preventDefault()
-    const target = event.currentTarget
-    const { selectionStart, selectionEnd } = target
-    const next = `${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`
-    onChange(next)
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const target = event.currentTarget;
+    const { selectionStart, selectionEnd } = target;
+    const next = `${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`;
+    onChange(next);
     window.requestAnimationFrame(() => {
-      target.selectionStart = selectionStart + 2
-      target.selectionEnd = selectionStart + 2
-    })
-  }
+      target.selectionStart = selectionStart + 2;
+      target.selectionEnd = selectionStart + 2;
+    });
+  };
 
   // 滚动同步：按比例跟随，长文时右侧不会跑偏
   useEffect(() => {
-    const source = sourceRef.current
-    const preview = previewRef.current
-    if (!source || !preview) return
+    const source = sourceRef.current;
+    const preview = previewRef.current;
+    if (!source || !preview) return;
 
     const sync = () => {
-      const sourceRange = source.scrollHeight - source.clientHeight
-      const previewRange = preview.scrollHeight - preview.clientHeight
-      if (sourceRange <= 0 || previewRange <= 0) return
-      preview.scrollTop = (source.scrollTop / sourceRange) * previewRange
-    }
-    source.addEventListener('scroll', sync, { passive: true })
-    return () => source.removeEventListener('scroll', sync)
-  }, [])
+      const sourceRange = source.scrollHeight - source.clientHeight;
+      const previewRange = preview.scrollHeight - preview.clientHeight;
+      if (sourceRange <= 0 || previewRange <= 0) return;
+      preview.scrollTop = (source.scrollTop / sourceRange) * previewRange;
+    };
+    source.addEventListener("scroll", sync, { passive: true });
+    return () => source.removeEventListener("scroll", sync);
+  }, []);
 
   return (
-    <div className={`md-editor ${className ?? ''}`}>
+    <div className={`md-editor ${className ?? ""}`}>
       <div className="md-editor__pane">
         <div className="md-editor__label">Markdown 源文件</div>
         <textarea
@@ -63,7 +67,9 @@ export function MarkdownEditor({ value, onChange, className }: MarkdownEditorPro
           onKeyDown={handleKeyDown}
           spellCheck={false}
           aria-label="Markdown 源文件"
-          placeholder={'# 开始写作\n\n支持 Markdown 语法；数学公式用 $...$ 行内、$$...$$ 独立成行。'}
+          placeholder={
+            "# 开始写作\n\n支持 Markdown 语法；数学公式用 $...$ 行内、$$...$$ 独立成行。"
+          }
         />
       </div>
       <div className="md-editor__pane">
@@ -75,5 +81,5 @@ export function MarkdownEditor({ value, onChange, className }: MarkdownEditorPro
         />
       </div>
     </div>
-  )
+  );
 }
