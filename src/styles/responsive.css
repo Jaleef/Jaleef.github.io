@@ -60,4 +60,14 @@
     display: inline-block;
     margin-bottom: 18px;
   }
+  /* 手机上把跳转按钮收小并贴边，避免压住正文 */
+  .scroll-jumper {
+    right: 12px;
+    bottom: 12px;
+  }
+  .scroll-jumper__button {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
 }

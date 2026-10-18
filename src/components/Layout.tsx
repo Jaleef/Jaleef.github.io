@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
+import { ScrollJumper } from "./ScrollJumper";
 
 /** 站点外壳：页头、导航、页脚。所有路由页面都渲染在 children 里。 */
 export function Layout({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
       <main>{children}</main>
       <footer>用文字记录思考 · Powered by GitHub Pages</footer>
+      <ScrollJumper />
     </div>
   );
 }

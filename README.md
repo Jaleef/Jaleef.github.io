@@ -52,6 +52,7 @@ src/
 │   ├── MarkdownEditor.tsx  分栏编辑器
 │   ├── MarkdownBody.tsx    渲染后的正文
 │   ├── PageLoading.tsx     路由分包加载占位
+│   ├── ScrollJumper.tsx    右下角「回到顶部 / 跳到底部」
 │   └── BackLink.tsx / TagList.tsx
 ├── hooks/
 │   ├── useTheme.ts         浅色 / 深色主题
