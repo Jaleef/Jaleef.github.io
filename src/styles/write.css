@@ -1,0 +1,193 @@
+/* 写作页：工具栏、表单、发布状态、冲突选择框 */
+.write-page {
+  max-width: 1240px;
+  margin: auto;
+  padding: 35px 0 100px;
+}
+.write-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.write-toolbar .back-link {
+  margin: 0;
+}
+.write-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.primary-button,
+.secondary-button {
+  border: 0;
+  border-radius: 5px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.primary-button {
+  color: white;
+  background: var(--accent);
+  margin-left: 10px;
+}
+/* 请求进行中禁用按钮，避免重复提交 */
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.secondary-button {
+  color: var(--muted);
+  background: transparent;
+}
+.secondary-button.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.title-input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font-size: clamp(35px, 6vw, 55px);
+  font-weight: 750;
+  letter-spacing: -0.06em;
+  margin-bottom: 22px;
+}
+.post-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.post-options input,
+.token-input {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  border-radius: 5px;
+  padding: 10px 12px;
+  outline-color: var(--accent);
+  font-size: 13px;
+}
+/* 工具栏里的 Token 输入框：与发布按钮同一行 */
+.token-input {
+  width: 240px;
+  height: 38px;
+}
+.token-input:focus {
+  border-color: var(--accent);
+}
+.toolbar-status {
+  margin: 0 0 22px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.token-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 18px 0 0;
+}
+/* 文件名冲突时的选择框 */
+.conflict-box {
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  display: grid;
+  gap: 12px;
+}
+.conflict-title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.conflict-title code {
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.conflict-actions .primary-button {
+  margin-left: 0;
+}
+.conflict-new {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.conflict-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+/* 发布前的文件名预览，避免到报错才发现 slug 不对 */
+.slug-preview {
+  margin: -6px 0 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.slug-preview code {
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.slug-warning {
+  margin-left: 6px;
+}
+/* 编辑模式提示条 */
+.edit-banner {
+  margin: 0 0 18px;
+  padding: 9px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+.edit-banner code {
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+/* 草稿：再次打开时询问是否恢复 + 编辑器下方的自动保存提示 */
+.draft-restore {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.draft-restore p {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.draft-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}

@@ -1,0 +1,58 @@
+/* 站点外壳：页头、导航、内容宽度、页脚 */
+.site-shell {
+  min-height: 100vh;
+}
+.site-header {
+  height: 76px;
+  max-width: 1080px;
+  margin: auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  font-size: 23px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+.brand span {
+  color: var(--accent);
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  color: var(--muted);
+}
+nav a {
+  text-decoration: none;
+  font-size: 14px;
+}
+nav a:hover {
+  color: var(--accent);
+}
+.write-link {
+  color: var(--accent);
+}
+.theme-button {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 20px;
+}
+main {
+  max-width: 1080px;
+  margin: auto;
+  padding: 0 32px;
+}
+footer {
+  color: var(--muted);
+  max-width: 1080px;
+  padding: 25px 32px 40px;
+  margin: auto;
+  font-size: 12px;
+}

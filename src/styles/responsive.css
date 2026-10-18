@@ -1,0 +1,63 @@
+/* 窄屏适配：必须最后导入，媒体查询才能覆盖上面的基础规则 */
+@media (max-width: 900px) {
+  /* 分栏改上下排列，两边都保留可编辑高度 */
+  .md-editor {
+    grid-template-columns: 1fr;
+  }
+  .md-editor__source,
+  .md-editor__preview {
+    min-height: 380px;
+    max-height: 60vh;
+  }
+}
+@media (max-width: 650px) {
+  .site-header,
+  main {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .home-page {
+    padding-top: 65px;
+  }
+  .intro-copy {
+    margin-bottom: 60px;
+  }
+  .post-card {
+    grid-template-columns: 1fr 25px;
+    gap: 8px;
+  }
+  .post-date {
+    grid-column: 1 / -1;
+  }
+  .post-options {
+    grid-template-columns: 1fr;
+  }
+  .post-page {
+    padding-top: 45px;
+  }
+  .write-toolbar {
+    margin-bottom: 20px;
+  }
+  .write-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .token-input {
+    width: 100%;
+    order: -1;
+  }
+  .danger-controls {
+    grid-template-columns: 1fr;
+  }
+  .danger-confirm {
+    width: 100%;
+  }
+  .post-card-row .post-card {
+    padding-right: 0;
+  }
+  .edit-link {
+    position: static;
+    display: inline-block;
+    margin-bottom: 18px;
+  }
+}

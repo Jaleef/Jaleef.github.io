@@ -1,0 +1,102 @@
+/* 文章详情页 */
+.post-page {
+  max-width: 740px;
+  margin: auto;
+  padding: 70px 0 100px;
+}
+.post-page h1 {
+  font-size: clamp(38px, 6vw, 60px);
+  line-height: 1.08;
+  letter-spacing: -0.06em;
+  margin: 0 0 20px;
+}
+.post-description {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.post-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 65px;
+}
+.post-page-nav .back-link {
+  margin: 0;
+}
+.post-page-nav .edit-link {
+  position: static;
+}
+.not-found {
+  text-align: center;
+  padding: 120px 0;
+}
+.not-found h1 {
+  font-size: 40px;
+}
+/* 详情页底部的删除区域：用 Token 二次确认的危险操作 */
+.danger-zone {
+  margin-top: 90px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+}
+.danger-button {
+  justify-self: start;
+  border: 1px solid color-mix(in srgb, #c0392b 45%, var(--line));
+  background: transparent;
+  color: #c0392b;
+  border-radius: 5px;
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.danger-button:hover {
+  background: color-mix(in srgb, #c0392b 10%, transparent);
+}
+.danger-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.danger-hint code {
+  font-size: 11px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.danger-controls {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+}
+.danger-controls input {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  border-radius: 5px;
+  padding: 10px 12px;
+  outline-color: var(--accent);
+  font-size: 13px;
+}
+.danger-confirm {
+  border: 0;
+  border-radius: 5px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-weight: 600;
+  color: white;
+  background: #c0392b;
+}
+.danger-confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.danger-controls .secondary-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

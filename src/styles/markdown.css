@@ -1,0 +1,94 @@
+/* Markdown 正文排版：文章页与编辑器预览共用同一个 .markdown-body 类 */
+.markdown-body {
+  margin-top: 55px;
+  font-size: 17px;
+  line-height: 1.9;
+}
+.markdown-body h2 {
+  margin-top: 48px;
+  font-size: 29px;
+  letter-spacing: -0.04em;
+}
+.markdown-body h3 {
+  margin-top: 35px;
+}
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.markdown-body blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 25px 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+.markdown-body pre {
+  overflow-x: auto;
+  background: #242220;
+  color: #f4eee8;
+  padding: 18px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.markdown-body code {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+/* 表格：GFM 表格语法会被正常解析成 <table>，这里给它边框与内线，并让宽表格可以横向滚动 */
+.markdown-body table,
+.md-editor__preview.markdown-body table {
+  border-collapse: collapse;
+  margin: 26px 0;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+.markdown-body th,
+.markdown-body td,
+.md-editor__preview.markdown-body th,
+.md-editor__preview.markdown-body td {
+  border: 1px solid var(--line);
+  padding: 9px 13px;
+}
+.markdown-body th,
+.md-editor__preview.markdown-body th {
+  background: color-mix(in srgb, var(--line) 55%, transparent);
+  color: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+.markdown-body tbody tr:nth-child(even),
+.md-editor__preview.markdown-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--line) 20%, transparent);
+}
+/* 表头单元格会带 align 属性（来自 GFM 的 :---:），保持居中/右对齐不被覆盖 */
+.markdown-body th[align="center"],
+.markdown-body td[align="center"] {
+  text-align: center;
+}
+.markdown-body th[align="right"],
+.markdown-body td[align="right"] {
+  text-align: right;
+}
+/* 数学公式：长公式在窄屏下横向滚动，避免把版面撑破 */
+.math-block {
+  margin: 28px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+.math-inline {
+  display: inline-block;
+}
+.math-block .katex-display {
+  margin: 0;
+}
+.math-block .katex,
+.math-inline .katex {
+  font-size: 1.05em;
+}

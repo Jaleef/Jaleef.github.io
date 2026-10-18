@@ -1,6 +1,6 @@
 ---
 title: 校园网中，为什么经路由器可达的服务器，直连 Wi-Fi 反而不可达？
-description: date: 2026-10-07
+description:
 date: 2026-10-07
 tags: []
 ---

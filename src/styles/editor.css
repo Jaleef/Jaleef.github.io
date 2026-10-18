@@ -1,0 +1,71 @@
+/* 分栏 Markdown 编辑器：左写源码，右看预览 */
+.md-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.md-editor__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.md-editor__label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  margin-bottom: 7px;
+}
+.md-editor__source {
+  flex: 1;
+  min-height: 620px;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: inherit;
+  padding: 18px;
+  outline-color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.85;
+  tab-size: 2;
+}
+.md-editor__preview {
+  flex: 1;
+  min-height: 620px;
+  max-height: 620px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 18px;
+}
+/* 预览区沿用文章页的排版，但去掉为正文页准备的上间距并整体缩小一档 */
+.md-editor__preview.markdown-body {
+  margin-top: 0;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.md-editor__preview.markdown-body h1 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px;
+}
+.md-editor__preview.markdown-body h2 {
+  margin-top: 26px;
+  font-size: 19px;
+}
+.md-editor__preview.markdown-body h3 {
+  margin-top: 20px;
+  font-size: 16px;
+}
+.md-editor__preview.markdown-body pre {
+  font-size: 12px;
+  padding: 12px;
+}
+.md-editor__preview.markdown-body img {
+  max-width: 100%;
+}

@@ -1,0 +1,13 @@
+/* 主题色板：浅色为默认，<html data-theme="dark"> 时整体切换 */
+:root {
+  --surface: #fff;
+  --muted: #817b75;
+  --line: #e4e0d9;
+  --accent: #bc5b36;
+}
+:root[data-theme="dark"] {
+  --surface: #242220;
+  --muted: #aaa29a;
+  --line: #3b3834;
+  --accent: #e88b62;
+}

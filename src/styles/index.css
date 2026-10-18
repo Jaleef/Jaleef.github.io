@@ -1,0 +1,23 @@
+/*
+ * 样式入口
+ * --------
+ * 按层叠顺序导入：越靠后的文件优先级越高（同为单类选择器时）。
+ *   tokens   主题变量
+ *   base     全局排版
+ *   common   跨页面小片段
+ *   layout   站点外壳
+ *   home / post / write   各页面样式
+ *   markdown 正文排版（编辑器预览会在这之后覆盖字号）
+ *   editor   分栏编辑器
+ *   responsive 媒体查询（必须最后）
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./common.css";
+@import "./layout.css";
+@import "./home.css";
+@import "./post.css";
+@import "./markdown.css";
+@import "./write.css";
+@import "./editor.css";
+@import "./responsive.css";

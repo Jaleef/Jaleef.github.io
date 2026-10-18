@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef } from "react";
-import { renderMarkdown } from "./math";
+import { renderMarkdown } from "../lib/markdown";
 
 /**
  * 分栏 Markdown 编辑器：左侧写源文件，右侧实时预览。

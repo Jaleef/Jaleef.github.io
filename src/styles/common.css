@@ -1,0 +1,42 @@
+/* 跨页面复用的小片段：返回链接、编辑入口、状态提示、眉标 */
+.back-link {
+  display: inline-block;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  margin-bottom: 65px;
+}
+.back-link:hover {
+  color: var(--accent);
+}
+.edit-link {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 5px;
+  padding: 5px 11px;
+}
+.edit-link:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.status {
+  color: var(--accent);
+  font-size: 13px;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+/* 路由分包与正文按需加载的占位提示 */
+.post-loading {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 60px 0;
+}

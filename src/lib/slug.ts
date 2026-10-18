@@ -1,9 +1,8 @@
 /**
- * 文章文件名（slug）与仓库路径的工具
- * ------------------------------------
- * 之前的问题是：slug 用 `replace(/[^\w\s-]/g, '')` 推导，而 `\w` 只匹配
- * ASCII 字母数字下划线 —— 中文标题会被整段删掉，得到 `-` 甚至空字符串，
- * 于是文件名变成 `-.md`、URL 变成 `#/post/-`。
+ * 文章文件名（slug）工具
+ * ----------------------
+ * 早期版本用 `replace(/[^\w\s-]/g, '')` 推导文件名，而 `\w` 只匹配 ASCII，
+ * 中文标题会被整段删掉，得到 `-` 甚至空字符串，于是文件名变成 `-.md`。
  *
  * 这里改用 Unicode 感知的规则：
  *   - 保留各国文字与数字（`\p{L}` / `\p{N}`），中文标题也能得到可读的 slug；
@@ -22,6 +21,8 @@ export function createSlug(title: string): string {
       .replace(/[^\p{L}\p{N}\s_-]/gu, "")
       // 空白与下划线折叠成连字符
       .replace(/[\s_]+/g, "-")
+      // 连续连字符合并成一个，避免出现 `a--b` 这类难看的文件名
+      .replace(/-{2,}/g, "-")
       // 去掉首尾多余连字符
       .replace(/^-+|-+$/g, "")
   );
@@ -40,74 +41,4 @@ export function uniqueSlug(base: string, taken: Iterable<string>): string {
     if (!used.has(candidate)) return candidate;
   }
   return `${fallback}-${Date.now()}`;
-}
-
-/** 文章在仓库中的路径。slug 可能是非 ASCII，交给 encodeURIComponent 处理。 */
-export function postPath(slug: string): string {
-  return `content/posts/${slug}.md`;
-}
-
-/**
- * 查询仓库中某个 slug 是否已存在。
- * 返回 `{ sha }` 表示文件已存在（更新时必须带上它），`null` 表示是新文件，
- * `undefined` 表示无法确定（例如网络异常），交由后续写入请求报告错误。
- */
-export async function fetchExistingSha(
-  owner: string,
-  repo: string,
-  slug: string,
-  token: string,
-): Promise<{ sha: string } | null | undefined> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${postPath(slug)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-        },
-      },
-    );
-    if (response.status === 404) return null;
-    if (response.ok) {
-      const data = (await response.json()) as { sha?: string };
-      return data.sha ? { sha: data.sha } : undefined;
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * 列出仓库中已有的文章文件名。
- * 用来发现「仓库里已存在、但当前构建产物还没有」的文件，
- * 避免生成的 slug 悄悄覆盖它们。令牌不可用时返回空数组。
- */
-export async function fetchRepoSlugs(
-  owner: string,
-  repo: string,
-  token: string,
-): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/content/posts`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-        },
-      },
-    );
-    if (!response.ok) return [];
-    const entries = (await response.json()) as { name?: string }[];
-    if (!Array.isArray(entries)) return [];
-    return entries
-      .map((entry) => entry.name ?? "")
-      .filter((name) => name.toLowerCase().endsWith(".md"))
-      .map((name) => name.slice(0, -3))
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
 }
