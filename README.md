@@ -13,6 +13,15 @@
   正文通过 `import.meta.glob` 按需动态导入，**打开哪篇加载哪篇**，不再把所有正文打进首屏。
 - **按需渲染**：没有公式的页面不会下载 KaTeX 的样式与字体。
 
+## 主题
+
+默认 **GitHub Dark**，可一键切换到 **GitHub Light**；配色取自 GitHub Primer 的语义变量
+（`canvas` / `fg` / `muted` / `border` / `accent` / `danger`），全部集中在
+[`src/styles/tokens.css`](src/styles/tokens.css)，样式文件里没有硬编码颜色。
+
+深色是 CSS 的默认值（`:root` 即 GitHub Dark），浅色通过 `<html data-theme="light">` 覆盖，
+因此首屏在 JS 执行前就已经是深色，不会闪白。用户的选择记在 `localStorage`（键 `blog-theme:v2`）。
+
 ## 目录结构
 
 代码按「页面独占的逻辑 → 跨页面复用 → 纯工具」分层，`App.tsx` 只保留路由表：

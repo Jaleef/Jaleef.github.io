@@ -1,4 +1,4 @@
-/* 全局排版与基础元素重置 */
+/* 全局排版与基础元素重置。颜色全部来自 tokens.css，主题切换由 CSS 变量完成。 */
 :root {
   font-family:
     Inter,
@@ -8,16 +8,11 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  color: #252326;
-  background: #f8f7f4;
+  color: var(--fg);
+  background: var(--canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-}
-
-:root[data-theme="dark"] {
-  color: #f0eee9;
-  background: #191817;
 }
 * {
   box-sizing: border-box;

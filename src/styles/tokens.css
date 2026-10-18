@@ -1,13 +1,48 @@
-/* 主题色板：浅色为默认，<html data-theme="dark"> 时整体切换 */
+/*
+ * 主题色板：GitHub Dark（默认）/ GitHub Light
+ * ------------------------------------------
+ * 取色遵循 GitHub Primer 的语义命名（canvas / fg / muted / border / accent / danger），
+ * 因此换主题只需要替换这一组变量，样式文件里不再出现硬编码颜色。
+ *
+ * 深色是默认值：`:root` 直接就是 GitHub Dark，浅色通过 `<html data-theme="light">` 覆盖。
+ * 这样首屏在 JS 执行前就已经是深色，不会闪白。
+ */
 :root {
-  --surface: #fff;
-  --muted: #817b75;
-  --line: #e4e0d9;
-  --accent: #bc5b36;
+  color-scheme: dark;
+
+  /* GitHub Dark（Primer dark default） */
+  --canvas: #0d1117; /* 页面底色 */
+  --surface: #161b22; /* 输入框、编辑器面板等略微抬起的表面 */
+  --fg: #e6edf3; /* 正文文字 */
+  --muted: #8b949e; /* 次要文字 */
+  --line: #30363d; /* 分隔线、边框 */
+  --accent: #58a6ff; /* 链接 / 强调色 */
+  --accent-emphasis: #1f6feb; /* 实心按钮底色（配白字） */
+  --danger: #f85149; /* 危险操作文字 */
+  --danger-emphasis: #da3633; /* 危险操作按钮底色 */
+
+  /* 代码块：用 Primer 的 inset 色，比页面底色更黑，形成层次 */
+  --code-bg: #010409;
+  --code-border: #30363d;
+  --code-text: #e6edf3;
 }
-:root[data-theme="dark"] {
-  --surface: #242220;
-  --muted: #aaa29a;
-  --line: #3b3834;
-  --accent: #e88b62;
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* GitHub Light（Primer light default） */
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --fg: #1f2328;
+  --muted: #656d76;
+  --line: #d0d7de;
+  --accent: #0969da;
+  --accent-emphasis: #0969da;
+  --danger: #cf222e;
+  --danger-emphasis: #cf222e;
+
+  /* 代码块：浅灰底，与白色页面区分 */
+  --code-bg: #f6f8fa;
+  --code-border: #d0d7de;
+  --code-text: #1f2328;
 }

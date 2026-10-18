@@ -22,16 +22,20 @@
   padding-left: 20px;
   color: var(--muted);
 }
+/* 代码块：颜色跟随主题（浅色浅灰 / 深色近黑），由 tokens.css 里的 --code-* 提供。
+   加一条细边框，让代码块在相近的页面底色上仍有明确边界。 */
 .markdown-body pre {
   overflow-x: auto;
-  background: #242220;
-  color: #f4eee8;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  color: var(--code-text);
   padding: 18px;
   border-radius: 8px;
   font-size: 14px;
 }
+/* 行内代码：GitHub 用中性灰底，这里跟随主题的次要文字色做浅淡底色，不再用强调色 */
 .markdown-body code {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
   padding: 2px 5px;
   border-radius: 4px;
 }

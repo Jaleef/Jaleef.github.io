@@ -32,8 +32,8 @@
   font-weight: 600;
 }
 .primary-button {
-  color: white;
-  background: var(--accent);
+  color: #fff;
+  background: var(--accent-emphasis);
   margin-left: 10px;
 }
 /* 请求进行中禁用按钮，避免重复提交 */
